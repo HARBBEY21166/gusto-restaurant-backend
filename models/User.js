@@ -26,24 +26,10 @@ const userSchema = new mongoose.Schema({
     minlength: 6
   }
 }, {
-  timestamps: true // Automatically adds createdAt and updatedAt
+  timestamps: true
 });
 
-// Hash password before saving user - FIXED VERSION
-userSchema.pre('save', async function(next) {
-  try {
-    // Only hash the password if it's modified (or new)
-    if (!this.isModified('password')) return next();
-    
-    // Hash the password
-    this.password = await bcrypt.hash(this.password, 12);
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Method to check if password is correct
+// SIMPLE password comparison method - no pre-save middleware
 userSchema.methods.correctPassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };

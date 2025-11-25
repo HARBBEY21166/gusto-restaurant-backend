@@ -34,18 +34,21 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    // 3. Create new user
+    // 3. Hash password directly here (instead of in middleware)
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // 4. Create new user with hashed password
     const user = await User.create({
       firstName,
       lastName,
       email,
-      password // This will be automatically hashed by our model
+      password: hashedPassword
     });
 
-    // 4. Generate token
+    // 5. Generate token (you'll need to implement this)
     const token = generateToken(user._id);
 
-    // 5. Send response (don't send password back)
+    // 6. Send response (don't send password back)
     res.status(201).json({
       success: true,
       message: 'User created successfully',
