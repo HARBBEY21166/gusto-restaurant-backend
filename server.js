@@ -1,6 +1,19 @@
 // Load environment variables first
 require('dotenv').config();
 
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.log('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+  console.log(err.name, err.message);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.log('UNHANDLED REJECTION! 💥 Shutting down...');
+  console.log(err.name, err.message);
+  process.exit(1);
+});
+
 // Import required packages
 const express = require('express');
 const mongoose = require('mongoose');
@@ -10,16 +23,16 @@ const cors = require('cors');
 const app = express();
 
 // ========== MIDDLEWARE SETUP ==========
-// CORS configuration - SIMPLIFIED VERSION
+// CORS configuration
 app.use(cors({
-  origin: true, // Allow ALL origins in development
+  origin: true,
   credentials: true
 }));
 
 // JSON parsing
 app.use(express.json());
 
-// Request logging middleware - MUST be after CORS but before routes
+// Request logging middleware
 app.use((req, res, next) => {
   console.log('=== INCOMING REQUEST ===');
   console.log('Time:', new Date().toISOString());
@@ -31,7 +44,16 @@ app.use((req, res, next) => {
 });
 
 // ========== ROUTES ==========
-// Basic route - to test if server is working
+// Health check for Railway
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
+// Basic route
 app.get('/', (req, res) => {
   res.json({ message: 'Gusto Restaurant Backend is running!' });
 });
@@ -43,10 +65,12 @@ app.use('/api/auth', require('./routes/auth'));
 // Connect to MongoDB database
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => console.log('❌ MongoDB connection error:', err));
+  .catch(err => {
+    console.log('❌ MongoDB connection error:', err.message);
+  });
 
 // ========== ERROR HANDLING ==========
-// Error handling middleware - place this AFTER your routes
+// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ 
@@ -55,8 +79,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Handle 404 routes - FIXED VERSION
-// This catches any route that doesn't match the ones above
+// Handle 404 routes
 app.use((req, res) => {
   res.status(404).json({ 
     success: false,
@@ -65,8 +88,15 @@ app.use((req, res) => {
 });
 
 // ========== START SERVER ==========
-// Start the server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('👋 SIGTERM RECEIVED. Shutting down gracefully');
+  server.close(() => {
+    console.log('💥 Process terminated');
+  });
 });
