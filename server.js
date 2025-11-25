@@ -9,32 +9,43 @@ const cors = require('cors');
 // Create Express app
 const app = express();
 
-// Middleware - these are like helpers that process requests
-// app.use(cors()); 
+// ========== MIDDLEWARE SETUP ==========
+// CORS configuration - SIMPLIFIED VERSION
 app.use(cors({
-  origin: [
-    'https://9000-firebase-studio-1763629194173.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev',
-    'https://gusto-lime.vercel.app',
-    'http://localhost:3000' // For local development
-  ],
+  origin: true, // Allow ALL origins in development
   credentials: true
-})); // Allow frontend to connect
+}));
 
-app.use(express.json()); // Let server understand JSON data
+// JSON parsing
+app.use(express.json());
 
+// Request logging middleware - MUST be after CORS but before routes
+app.use((req, res, next) => {
+  console.log('=== INCOMING REQUEST ===');
+  console.log('Time:', new Date().toISOString());
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  console.log('Origin:', req.headers.origin);
+  console.log('=======================');
+  next();
+});
+
+// ========== ROUTES ==========
 // Basic route - to test if server is working
 app.get('/', (req, res) => {
   res.json({ message: 'Gusto Restaurant Backend is running!' });
 });
 
-// Routes
+// Auth routes
 app.use('/api/auth', require('./routes/auth'));
 
+// ========== DATABASE CONNECTION ==========
 // Connect to MongoDB database
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch(err => console.log('❌ MongoDB connection error:', err));
 
+// ========== ERROR HANDLING ==========
 // Error handling middleware - place this AFTER your routes
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -53,6 +64,7 @@ app.use((req, res) => {
   });
 });
 
+// ========== START SERVER ==========
 // Start the server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
