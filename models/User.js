@@ -29,19 +29,23 @@ const userSchema = new mongoose.Schema({
   timestamps: true // Automatically adds createdAt and updatedAt
 });
 
-// Hash password before saving user
+// Hash password before saving user - FIXED VERSION
 userSchema.pre('save', async function(next) {
-  // Only hash the password if it's modified (or new)
-  if (!this.isModified('password')) return next();
-  
-  // Hash the password
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
+  try {
+    // Only hash the password if it's modified (or new)
+    if (!this.isModified('password')) return next();
+    
+    // Hash the password
+    this.password = await bcrypt.hash(this.password, 12);
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Method to check if password is correct
-userSchema.methods.correctPassword = async function(candidatePassword, userPassword) {
-  return await bcrypt.compare(candidatePassword, userPassword);
+userSchema.methods.correctPassword = async function(candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
 };
 
 // Create the User model
